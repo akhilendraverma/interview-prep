@@ -3,6 +3,7 @@ window.PREP = {
   topics: [],
   questions: [],
   challenges: [],
+  gens: [],
   /**
    * meta: {id, name, short, color, icon, blurb, subs: {key: {name, tip, link}}}
    * rows: [sub, level(1 basic, 2 intermediate, 3 advanced), question, correct, [wrong, ...], explanation, code?]

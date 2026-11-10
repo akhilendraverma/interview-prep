@@ -49,7 +49,7 @@
         const best = bestFor(t.id), n = PREP.questions.filter((q) => q.topic === t.id).length;
         return `<a class="topic" href="#/assess/${t.id}" style="--c:${t.color}"><span class="ticon">${t.icon}</span>
           <b>${E(t.name)}</b><span class="tblurb">${E(t.blurb)}</span>
-          <span class="tmeta">${n} questions${best === null ? "" : ` · best <b>${best}%</b>`}</span></a>`;
+          <span class="tmeta">${n} questions${PREP.gens.some((g) => g.topic === t.id) ? " + unlimited practice" : ""}${best === null ? "" : ` · best <b>${best}%</b>`}</span></a>`;
       }).join("")}</div>
       <section class="split">
         <a class="feature" href="#/assess"><span class="ficon">🧭</span><b>Full skills check</b><span>Mix several topics in one test and get a single report showing your strongest and weakest areas.</span></a>
@@ -94,7 +94,8 @@
     const update = () => {
       const ts = [...f.querySelectorAll("[name=t]:checked")].map((x) => x.value);
       const n = pool(ts, f.level.value).length;
-      $("#count").textContent = ts.length ? `${Math.min(n, ts.length * Number(f.per.value))} questions from ${ts.length} topic${ts.length > 1 ? "s" : ""}` : "";
+      const g = ts.some((t) => PREP.gens.some((x) => x.topic === t));
+      $("#count").textContent = ts.length ? `About ${Number(f.per.value) >= 999 ? n : Math.min(n + (g ? 999 : 0), ts.length * Number(f.per.value))} questions from ${ts.length} topic${ts.length > 1 ? "s" : ""}${g ? ", including freshly generated ones" : ""}` : "";
     };
     f.addEventListener("change", update); update();
     $("#all").onclick = () => { f.querySelectorAll("[name=t]").forEach((x) => (x.checked = true)); update(); };
@@ -105,9 +106,26 @@
       if (!opts.topics.length) { $("#err").textContent = "Choose at least one topic."; return; }
       store.set("itprep-setup", opts);
       const qs = [];
-      for (const t of opts.topics) qs.push(...pickBalanced(pool([t], opts.level), opts.per));
-      begin(qs, opts);
+      for (const t of opts.topics) qs.push(...buildFor(t, opts.level, opts.per));
+      if (!qs.length) { $("#err").textContent = "No questions match that level for these topics. Try All levels."; return; }
+      begin(shuffle(qs), opts);
     };
+  }
+  /** Questions for one topic: a mix of written questions and freshly generated ones (where the topic has generators). */
+  function buildFor(topic, level, per, subs) {
+    const okLevel = (x) => level === "all" || x.level == level;
+    const okSub = (x) => !subs || subs.has(`${x.topic}.${x.sub}`);
+    const written = PREP.questions.filter((q) => q.topic === topic && okLevel(q) && okSub(q));
+    const gens = PREP.gens.filter((g) => g.topic === topic && okLevel(g) && okSub(g));
+    if (!gens.length) return pickBalanced(written, per);
+    const nGen = per >= 999 ? 15 : Math.min(Math.round(per * 0.4) || 1, per), nWritten = per >= 999 ? written.length : Math.max(per - nGen, 0);
+    const out = pickBalanced(written, nWritten);
+    const order = shuffle(gens);
+    for (let i = 0; out.length < (per >= 999 ? written.length + nGen : per) && i < nGen + per; i++) {
+      const q = PREP.makeGen(order[i % order.length]);
+      if (q) out.push(q);
+    }
+    return out;
   }
   const pool = (topics, level) => PREP.questions.filter((q) => topics.includes(q.topic) && (level === "all" || q.level == level));
   /** Pick n questions spread across sub-topics, so the report covers each area. */
@@ -194,6 +212,7 @@
     const rec = { id: Date.now().toString(36), date: new Date().toISOString(), mode: quiz.opts.mode, timed: quiz.opts.timed, secs: Math.round((Date.now() - quiz.started) / 1000), perTopic: {}, perSub: {}, perLevel: {}, answers: [] };
     quiz.qs.forEach((q, i) => {
       const a = quiz.answers[i] || { qid: q.id, chosen: null, ok: false };
+      if (q.gen) a.snap = { q: q.q, code: q.code, correct: q.correct, explain: q.explain };
       rec.answers.push(a);
       const add = (o, k) => { o[k] = o[k] || { c: 0, n: 0 }; o[k].n++; if (a.ok) o[k].c++; };
       add(rec.perTopic, q.topic); add(rec.perSub, `${q.topic}.${q.sub}`); add(rec.perLevel, q.level);
@@ -250,7 +269,7 @@
         <div class="actions noprint"><a class="btn ghost" href="#/assess">New assessment</a><button class="btn ghost" id="print">Print / save as PDF</button><a class="btn ghost" href="#/code">Try coding challenges</a></div>
 
         <h2 class="sec">Review your answers</h2>
-        <div class="review">${rec.answers.map((a, i) => { const q = qById[a.qid]; if (!q) return ""; return `<details class="rv ${a.ok ? "ok" : "no"}">
+        <div class="review">${rec.answers.map((a, i) => { const q = qById[a.qid] || a.snap; if (!q) return ""; return `<details class="rv ${a.ok ? "ok" : "no"}">
           <summary><span class="mark">${a.ok ? "✓" : "✗"}</span> <span>${i + 1}. ${fmt(q.q)}</span></summary>
           ${q.code ? `<pre class="code">${E(q.code)}</pre>` : ""}
           <p>Your answer: <b>${a.chosen ? fmt(a.chosen) : "not answered"}</b></p>${a.ok ? "" : `<p>Correct answer: <b>${fmt(q.correct)}</b></p>`}
@@ -262,7 +281,7 @@
     const drill = $("#drill");
     if (drill) drill.onclick = () => {
       const keys = new Set(focus.map((s) => `${s.T.id}.${s.sub}`));
-      const qs = shuffle(PREP.questions.filter((q) => keys.has(`${q.topic}.${q.sub}`))).slice(0, 30);
+      const qs = shuffle([...new Set(focus.map((s) => s.T.id))].flatMap((t) => buildFor(t, "all", 12, keys))).slice(0, 30);
       begin(qs, { topics: [...new Set(focus.map((s) => s.T.id))], per: 0, level: "all", mode: "practice", timed: false });
     };
   }
