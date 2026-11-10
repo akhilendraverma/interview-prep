@@ -1,0 +1,45 @@
+{
+  "ads": [
+    {
+      "image": "ads/book-app-support.png",
+      "book": true,
+      "kicker": "Interview prep · Kindle ebook",
+      "title": "Application Support Interview Handbook",
+      "text": "Going for an application or production support role? Prepare with this handbook, now on Amazon Kindle.",
+      "cta": "View on Amazon",
+      "url": "https://www.amazon.com/dp/B0HNGSYFGZ"
+    },
+    {
+      "image": "ads/itjobs.png",
+      "kicker": "Looking for a tech job?",
+      "title": "IT Jobs",
+      "text": "Software, data, cloud, security and AI jobs in Ireland, India, Australia and beyond, straight from the companies.",
+      "cta": "Search jobs",
+      "url": "https://jobs.irishindiatimes.com/"
+    },
+    {
+      "image": "ads/newspaper.png",
+      "kicker": "Daily news",
+      "title": "IrishIndiaTimes",
+      "text": "Today's news for Indians in Ireland, with Ireland, India and Asia headlines in one place. Free, every day.",
+      "cta": "Read today's paper",
+      "url": "https://irishindiatimes.com/"
+    },
+    {
+      "image": "ads/radio.png",
+      "kicker": "Listen live",
+      "title": "Irish India Radio",
+      "text": "Indian music non-stop, live from Dublin, with the time and date read out on air. Free, right in your browser.",
+      "cta": "Listen now",
+      "url": "https://radio.irishindiatimes.com/"
+    },
+    {
+      "image": "ads/kundali.png",
+      "kicker": "Free app",
+      "title": "Kutumb Kundali",
+      "text": "Vedic birth charts for the whole family: sidereal (Lahiri) charts, dashas and family compatibility. Free on Android and iPhone.",
+      "cta": "Open the free app",
+      "url": "https://akhilendraverma.github.io/Kutumb.Kundali.App/"
+    }
+  ]
+}
